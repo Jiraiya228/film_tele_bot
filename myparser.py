@@ -4,56 +4,54 @@ import time
 import pickle
 
 
-def write_to_file(list):
-    with open('films.txt', 'w', encoding='utf-8') as file:
-        for el in list:
-            file.write(el + '\n')
+def write_to_file(data):
+    with open('data.pickle', 'wb') as f:
+        pickle.dump(data, f)
 
 
 def get_top_250_films():
-    all_films_list = []
+    films_dic = {}
 
     wd = webdriver.Firefox()
 
     for i in range(1, 6):
         wd.get(f'https://www.kinopoisk.ru/lists/top250/?page={i}&tab=all')
-        films = wd.find_elements_by_class_name('selection-film-item-meta__name')
+        films = wd.find_elements_by_class_name('selection-film-item-meta__link')
+        films_hrefs = []
+
 
         for el in films:
-            all_films_list.append(el.text)
-            print(el.text)
+            films_hrefs.append(el.get_attribute('href'))
+        for el in films_hrefs:
+            wd.get(el)
+            time.sleep(1)
+            film_name = wd.find_element_by_class_name('styles_title__2l0HH').text
+            img = wd.find_element_by_class_name('film-poster').get_attribute('src')
+            film_description = wd.find_element_by_class_name('styles_paragraph__2Otvx').text
 
-        time.sleep(1)
+            films_dic[film_name] = [img, film_description]
+
+
+
 
     wd.close()
-    write_to_file(all_films_list)
+
+    write_to_file(films_dic)
 
 
 def random_film():
+    with open('data.pickle', 'rb') as f:
+        data = pickle.load(f)
 
-    with open('films.txt', 'r', encoding='utf-8') as file:
-        lines = file.read().splitlines()
+    index = random.randint(0, 249)
 
-    index = random.randint(0, len(lines))
-    film = lines[index]
+    film_name = list(data.keys())[index]
+    poster = data[film_name][0]
+    description = data[film_name][1]
 
-    return film
+    return [film_name, poster, description]
+
 
 
 if __name__ == '__main__':
-    get_top_250_films()
-
-    data = {
-        'a': [1, 2.0, 3, 4 + 6j],
-        'b': ("character string", b"byte string"),
-    }
-
-    # сохранение в файл
-    with open('data.pickle', 'wb') as f:
-        pickle.dump(data, f)
-
-    # чтение из файла
-    with open('data.pickle', 'rb') as f:
-        data_new = pickle.load(f)
-
-    print(data_new)
+   get_top_250_films()
